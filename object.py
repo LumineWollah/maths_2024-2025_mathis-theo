@@ -18,11 +18,40 @@ class Object:
         x = int(SCREEN_SIZE[0] / 2 + point[0] * factor * SCREEN_SIZE[0] / 2)
         y = int(SCREEN_SIZE[1] / 2 - point[1] * factor * SCREEN_SIZE[1] / 2)
         return (x, y)
+    
+    def world_to_camera(self, point, camera):
+        cos_yaw = math.cos(-camera.yaw)
+        sin_yaw = math.sin(-camera.yaw)
+        cos_pitch = math.cos(-camera.pitch)
+        sin_pitch = math.sin(-camera.pitch)
 
-    def draw(self, surface, fov, distance):
-        projected_points = [self.project(v, fov=fov, distance=distance) for v in self.vertices]
+        rotation_yaw = np.array([
+            [cos_yaw, 0, sin_yaw],
+            [0, 1, 0],
+            [-sin_yaw, 0, cos_yaw]
+        ])
+
+        rotation_pitch = np.array([
+            [1, 0, 0],
+            [0, cos_pitch, -sin_pitch],
+            [0, sin_pitch, cos_pitch]
+        ])
+
+        rotation_matrix = rotation_pitch @ rotation_yaw
+
+        translated_point = point - camera.position
+        camera_point = rotation_matrix @ translated_point
+        return camera_point
+
+    def draw(self, surface, fov, distance, camera):
+        transformed_vertices = []
+        for v in self.vertices:
+            camera_space_vertex = self.world_to_camera(v, camera)
+            projected_point = self.project(camera_space_vertex, fov, distance)
+            transformed_vertices.append(projected_point)
+
         for edge in self.edges:
-            pg.draw.line(surface, (255, 255, 255), projected_points[edge[0]], projected_points[edge[1]], 2)
+            pg.draw.line(surface, (255, 255, 255), transformed_vertices[edge[0]], transformed_vertices[edge[1]], 2)
 
     def rotateWithMatrix(self, x=0, y=0, z=0):
         # Mise à jour des angles d'Euler

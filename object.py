@@ -5,7 +5,6 @@ from constants import *
 from quaternion import Quaternion
 
 class Object:
-
     def __init__(self, positions, angles, vertices, edges):
         self.positions = positions
         self.angles = angles
@@ -105,3 +104,106 @@ class Object:
     
     def rotateRelativeWithQuaternions(self, dx=0, dy=0, dz=0):
         self.rotateWithQuaternions(self.angles[0]+dx, self.angles[1]+dy, self.angles[2]+dz)
+
+class Tetrahedron(Object):
+    def __init__(self):
+        vertices = np.array([
+            [1, 1, 1],
+            [-1, -1, 1],
+            [-1, 1, -1],
+            [1, -1, -1]
+        ])
+
+        edges = [
+            (0, 1), (0, 2), (0, 3),
+            (1, 2), (1, 3), (2, 3)
+        ]
+
+        super().__init__(
+            positions=[0, 0, 0],
+            angles=[0, 0, 0],
+            vertices=vertices,
+            edges=edges
+        )
+
+class Cube(Object):
+    def __init__(self):
+        super().__init__(
+            positions = [0, 0, 0],
+            angles = [0, 0, 0],
+            vertices = np.array([
+                [-1, -1, -1],
+                [1, -1, -1],
+                [1, 1, -1],
+                [-1, 1, -1],
+                [-1, -1, 1],
+                [1, -1, 1],
+                [1, 1, 1],
+                [-1, 1, 1]
+            ]),
+            edges = [
+                (0, 1), (1, 2), (2, 3), (3, 0),
+                (4, 5), (5, 6), (6, 7), (7, 4),
+                (0, 4), (1, 5), (2, 6), (3, 7)
+            ]
+        )
+
+class Pyramid(Object):
+    def __init__(self):
+        vertices = np.array([
+            [-1, -1, -1],
+            [1, -1, -1],
+            [1, -1, 1],
+            [-1, -1, 1],
+            [0, 1, 0]
+        ])
+
+        edges = [
+            (0, 1), (1, 2), (2, 3), (3, 0),
+            (0, 4), (1, 4), (2, 4), (3, 4)
+        ]
+
+        super().__init__(
+            positions=[0, 0, 0],
+            angles=[0, 0, 0],
+            vertices=vertices,
+            edges=edges
+        )
+
+class Sphere(Object):
+    def __init__(self, detail=10):
+        vertices = []
+        edges = []
+
+        for i in range(detail + 1):
+            theta = np.pi * i / detail
+            for j in range(detail):
+                phi = 2 * np.pi * j / detail
+                x = np.sin(theta) * np.cos(phi)
+                y = np.cos(theta)
+                z = np.sin(theta) * np.sin(phi)
+                vertices.append([x, y, z])
+
+        for i in range(detail):
+            for j in range(detail):
+                current = i * detail + j
+                next_j = (j + 1) % detail
+                next_i = i + 1
+
+                if next_i <= detail:
+                    right = i * detail + next_j
+                    down = next_i * detail + j
+                    down_right = next_i * detail + next_j
+
+                    edges.append((current, right))
+                    edges.append((current, down))
+                    edges.append((current, down_right))
+
+        super().__init__(
+            positions=[0, 0, 0],
+            angles=[0, 0, 0],
+            vertices=np.array(vertices),
+            edges=edges
+        )
+
+     

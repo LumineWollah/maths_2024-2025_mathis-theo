@@ -3,7 +3,7 @@ import numpy as np
 import math
 
 from constants import *
-from cube import Cube
+from object import *
 from camera import Camera
 
 FOV = 3
@@ -25,7 +25,7 @@ class Engine():
         self.camera = Camera(position=np.array([0.0, 0.0, 5.0]))
 
         self.scene = [
-            Cube(),
+            Sphere(),
         ]
 
     def run(self):

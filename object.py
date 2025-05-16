@@ -54,9 +54,9 @@ class Object:
         self.vertices = np.dot(self.base_vertices, R.T)
 
     def rotateWithQuaternions(self, x=0, y=0, z=0):
-        self.angles[0] += x
-        self.angles[1] += y
-        self.angles[2] += z
+        self.angles[0] = x
+        self.angles[1] = y
+        self.angles[2] = z
 
         qx = Quaternion(math.cos(x/2), math.sin(x/2), 0, 0)
         qy = Quaternion(math.cos(y/2), 0, math.sin(y/2), 0)
@@ -70,3 +70,9 @@ class Object:
             rotated_vertices.append(rotated_v)
 
         self.vertices = np.array(rotated_vertices)
+
+    def rotateRelativeWithMatrix(self, dx=0, dy=0, dz=0):
+        self.rotateWithMatrix(self.angles[0]+dx, self.angles[1]+dy, self.angles[2]+dz)
+    
+    def rotateRelativeWithQuaternions(self, dx=0, dy=0, dz=0):
+        self.rotateWithQuaternions(self.angles[0]+dx, self.angles[1]+dy, self.angles[2]+dz)

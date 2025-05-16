@@ -35,7 +35,7 @@ class Engine():
                 if event.type == pg.KEYDOWN and event.key == pg.K_ESCAPE: self.running = False
 
             for obj in self.scene:
-                obj.rotateWithQuaternions(90, 90, 90)
+                obj.rotateRelativeWithQuaternions(0.01, 0.015, 0.02)
                 obj.draw(self.screen, FOV, DISTANCE)
 
             pg.display.update()

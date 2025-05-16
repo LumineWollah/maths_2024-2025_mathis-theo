@@ -1,6 +1,8 @@
 import pygame as pg
 import numpy as np
+import math
 from constants import *
+from quaternion import Quaternion
 
 class Object:
 
@@ -23,27 +25,48 @@ class Object:
             pg.draw.line(surface, (255, 255, 255), projected_points[edge[0]], projected_points[edge[1]], 2)
 
     def rotateWithMatrix(self, x=0, y=0, z=0):
-            self.angles[0] += x
-            self.angles[1] += y
-            self.angles[2] += z
+        # Mise à jour des angles d'Euler
+        self.angles[0] = x
+        self.angles[1] = y
+        self.angles[2] = z
 
-            Rx = np.array([
-                [1, 0, 0],
-                [0, np.cos(self.angles[0]), -np.sin(self.angles[0])],
-                [0, np.sin(self.angles[0]), np.cos(self.angles[0])]
-            ])
-            Ry = np.array([
-                [np.cos(self.angles[1]), 0, np.sin(self.angles[1])],
-                [0, 1, 0],
-                [-np.sin(self.angles[1]), 0, np.cos(self.angles[1])]
-            ])
-            Rz = np.array([
-                [np.cos(self.angles[2]), -np.sin(self.angles[2]), 0],
-                [np.sin(self.angles[2]), np.cos(self.angles[2]), 0],
-                [0, 0, 1]
-            ])
+        # Matrices de rotation pour chaque axe
+        Rx = np.array([
+            [1, 0, 0],
+            [0, math.cos(x), -math.sin(x)],
+            [0, math.sin(x), math.cos(x)]
+        ])
+        Ry = np.array([
+            [math.cos(y), 0, math.sin(y)],
+            [0, 1, 0],
+            [-math.sin(y), 0, math.cos(y)]
+        ])
+        Rz = np.array([
+            [math.cos(z), -math.sin(z), 0],
+            [math.sin(z), math.cos(z), 0],
+            [0, 0, 1]
+        ])
 
-            self.vertices = np.dot(self.base_vertices, Rx)
-            self.vertices = np.dot(self.vertices, Ry)
-            self.vertices = np.dot(self.vertices, Rz)
+        # Matrice de rotation combinée : R = Rz * Ry * Rx
+        R = Rz @ Ry @ Rx
 
+        # Application de la rotation aux sommets de base
+        self.vertices = np.dot(self.base_vertices, R.T)
+
+    def rotateWithQuaternions(self, x=0, y=0, z=0):
+        self.angles[0] += x
+        self.angles[1] += y
+        self.angles[2] += z
+
+        qx = Quaternion(math.cos(x/2), math.sin(x/2), 0, 0)
+        qy = Quaternion(math.cos(y/2), 0, math.sin(y/2), 0)
+        qz = Quaternion(math.cos(z/2), 0, 0, math.sin(z/2))
+
+        q_total = qz * qy * qx
+
+        rotated_vertices = []
+        for v in self.base_vertices:
+            rotated_v = q_total.rotate_vector(v)
+            rotated_vertices.append(rotated_v)
+
+        self.vertices = np.array(rotated_vertices)

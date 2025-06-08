@@ -32,9 +32,19 @@ def main():
     print("\nRotation du vecteur (1, 0, 0) avec q1:")
     print(q1.rotate_vector((1, 0, 0)))
     
+    print("\nq1 sous forme de matrice:")
+    for row in q1.to_matrix():
+        print(row)
+
+    print("\nReconversion de q1 en quaternion depuis la matrice:")
+    print(Quaternion.from_matrix(q1.to_matrix()))
+
     print("\nMatrice de rotation de q1:")
     for row in q1.to_rotation_matrix():
         print(row)
+
+    print("\nReconversion de q1 en quaternion:")
+    print(Quaternion.from_rotation_matrix(q1.to_rotation_matrix()))
     
     print("\nGénération d'un quaternion aléatoire:")
     print(Quaternion.random())

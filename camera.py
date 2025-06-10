@@ -2,6 +2,9 @@ import numpy as np
 from pygame.constants import *
 from OpenGL.GL import *
 from OpenGL.GLU import *
+
+from keymap import keymap
+
 class Camera:
     def __init__(self):
         self.pos = np.array([0, 0, 5], dtype=np.float32)
@@ -41,17 +44,17 @@ class Camera:
         forward, right, up = self.get_direction_vectors()
         velocity = self.speed * dt
 
-        if keys[K_w]:
+        if keys[keymap["forward"]]:
             self.pos += forward * velocity
-        if keys[K_s]:
+        if keys[keymap["backward"]]:
             self.pos -= forward * velocity
-        if keys[K_d]:
+        if keys[keymap["right"]]:
             self.pos += right * velocity
-        if keys[K_a]:
+        if keys[keymap["left"]]:
             self.pos -= right * velocity
-        if keys[K_e]:
+        if keys[keymap["up"]]:
             self.pos += up * velocity
-        if keys[K_q]:
+        if keys[keymap["down"]]:
             self.pos -= up * velocity
 
     def apply_view(self):

@@ -22,6 +22,7 @@ from OpenGL.GLU import *
 from constants import *
 from object import *
 from camera import Camera
+from keymap import keymap
 
 class Engine():
     def __init__(self):
@@ -32,7 +33,6 @@ class Engine():
         self.clock = pg.time.Clock()
         self.surf = pg.surface.Surface(SCREEN_SIZE)
         self.skybox_texture = self.load_skybox("assets/skybox/")
-
         self.camera = Camera()
 
         self.scene = [
@@ -57,9 +57,10 @@ class Engine():
         pygame.mouse.set_visible(True)
 
         cube_obj = self.load_obj('assets/objs/cube.obj')
-        angle = 0.0
+        # angle = 0.0
         rotation_q = Quaternion(1, 0, 0, 0)
 
+        wireframe = False
         running = True
         while running:
             dt = clock.tick(60) / 1000
@@ -105,8 +106,8 @@ class Engine():
                         mouse_control = False
                         pygame.event.set_grab(False)
                         pygame.mouse.set_visible(True)
-
-            
+                    if event.key == keymap["wireframe"]:
+                        wireframe = not wireframe
 
             keys = pygame.key.get_pressed()
             camera.update_position(keys, dt)
@@ -116,7 +117,7 @@ class Engine():
 
             self.draw_skybox(self.skybox_texture)
 
-            self.draw_axes()
+            self.draw_axes(length=5.0, width=5.0)
 
             rot = rotation_q.to_rotation_matrix()
             pivot = (1.0, 1.0, 1.0)
@@ -131,10 +132,13 @@ class Engine():
                 0.0,       0.0,       0.0,       1.0
             ])
             glTranslatef(*(-np.array(pivot)))
-            self.draw_obj(*cube_obj, wireframe=True)  
+            self.draw_obj(*cube_obj, wireframe=wireframe)  
             glPopMatrix()
 
-            
+            m = glGetFloatv(GL_MODELVIEW_MATRIX).copy()
+            # Supprimer la translation
+            m[3][0] = m[3][1] = m[3][2] = 0.0
+            self.draw_axes_overlay(m)
 
             pygame.display.flip()
             self.clock.tick(60)
@@ -163,18 +167,60 @@ class Engine():
                 glVertex3fv(vertices[vertex])
         glEnd()
 
-    def draw_axes(self):
+    def draw_axes(self, length=1.0, width=1.0):
+        glDisable(GL_TEXTURE_2D)
+        glDisable(GL_TEXTURE_CUBE_MAP)
+        glLineWidth(width)
+
         glBegin(GL_LINES)
-        glColor3f(1,0,0)
-        glVertex3f(0,0,0)
-        glVertex3f(2,0,0)
-        glColor3f(0,1,0)
-        glVertex3f(0,0,0)
-        glVertex3f(0,2,0)
-        glColor3f(0,0,1)
-        glVertex3f(0,0,0)
-        glVertex3f(0,0,2)
+
+        # Axe X (rouge)
+        glColor3f(1.0, 0.0, 0.0)
+        glVertex3f(0.0, 0.0, 0.0)
+        glVertex3f(length, 0.0, 0.0)
+
+        # Axe Y (vert)
+        glColor3f(0.0, 1.0, 0.0)
+        glVertex3f(0.0, 0.0, 0.0)
+        glVertex3f(0.0, length, 0.0)
+
+        # Axe Z (bleu)
+        glColor3f(0.0, 0.0, 1.0)
+        glVertex3f(0.0, 0.0, 0.0)
+        glVertex3f(0.0, 0.0, length)
+
         glEnd()
+
+        glColor3f(1.0, 1.0, 1.0)
+        glEnable(GL_TEXTURE_2D)
+        glLineWidth(1.0)
+
+    def draw_axes_overlay(self, camera_rotation_matrix):
+        viewport = glGetIntegerv(GL_VIEWPORT)
+        glViewport(0, viewport[3] - 100, 100, 100)
+
+        glMatrixMode(GL_PROJECTION)
+        glPushMatrix()
+        glLoadIdentity()
+        gluPerspective(45, 1.0, 0.1, 10.0)
+
+        glMatrixMode(GL_MODELVIEW)
+        glPushMatrix()
+        glLoadIdentity()
+        gluLookAt(0, 0, 3,  0, 0, 0,  0, 1, 0)
+        glMultMatrixf(camera_rotation_matrix)
+
+        glDisable(GL_DEPTH_TEST)
+
+        self.draw_axes(length=1.0, width=1.0)
+
+        glEnable(GL_DEPTH_TEST)
+        glPopMatrix()
+        glMatrixMode(GL_PROJECTION)
+        glPopMatrix()
+        glMatrixMode(GL_MODELVIEW)
+
+        glViewport(*viewport)
 
     def load_obj(self, filename):
         vertices = []
@@ -212,12 +258,12 @@ class Engine():
                     glVertex3fv(vertices[i])
             glEnd()
 
-    def load_skybox(selfm, folder_path):
+    def load_skybox(self, folder_path):
         from PIL import Image
         faces = [
             "right.png", "left.png",
             "top.png", "bottom.png",
-            "front.png", "back.png"
+            "front.png", "back.png",
         ]
         
         texID = glGenTextures(1)
@@ -234,6 +280,8 @@ class Engine():
 
         for i in range(6):
             img = Image.open(os.path.join(folder_path, faces[i])).convert('RGB')
+            img = img.transpose(Image.FLIP_TOP_BOTTOM)
+            img = img.transpose(Image.FLIP_LEFT_RIGHT)
             img_data = img.tobytes("raw", "RGB", 0, -1)
             glTexImage2D(target_faces[i], 0, GL_RGB, img.width, img.height, 0, GL_RGB, GL_UNSIGNED_BYTE, img_data)
 
@@ -252,7 +300,7 @@ class Engine():
         glBindTexture(GL_TEXTURE_CUBE_MAP, texture_id)
         glPushMatrix()
         
-        # Supprime les translations de la caméra (skybox reste autour du centre de vue)
+        # Supprime les translations de la caméra
         m = glGetFloatv(GL_MODELVIEW_MATRIX)
         m[3][0] = m[3][1] = m[3][2] = 0.0
         glLoadMatrixf(m)

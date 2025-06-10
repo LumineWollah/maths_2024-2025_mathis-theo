@@ -9,6 +9,7 @@ keymap = {
     "up": K_e,
     "down": K_q,
     "wireframe": K_z,
+    "texture": K_t,
 }
 
 # Default azerty
@@ -19,7 +20,8 @@ keymap = {
 #     "right": K_d,
 #     "up": K_e,
 #     "down": K_a,
-#     "wireframe": K_w,
+#     "wireframe": K_w, 
+#     "texture": K_t,
 # }
 
 # Custom

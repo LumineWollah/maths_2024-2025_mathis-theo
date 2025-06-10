@@ -1,7 +1,5 @@
 # TODO
 # - Composé de rotations avec quaternons, cisaillement, scalling, translation avec quaternon
-# - Texture
-# - Fix : Skybox
 # - Scènes
 
 # Remarques
@@ -52,15 +50,18 @@ class Engine():
         camera = Camera()
         clock = pygame.time.Clock()
 
-        mouse_control = False
         pygame.event.set_grab(False)
         pygame.mouse.set_visible(True)
 
         cube_obj = self.load_obj('assets/objs/cube.obj')
+        cube_tex = self.load_texture('assets/textures/placeholder.png')
+
         # angle = 0.0
         rotation_q = Quaternion(1, 0, 0, 0)
 
+        mouse_control = False
         wireframe = False
+        texture = False
         running = True
         while running:
             dt = clock.tick(60) / 1000
@@ -108,6 +109,8 @@ class Engine():
                         pygame.mouse.set_visible(True)
                     if event.key == keymap["wireframe"]:
                         wireframe = not wireframe
+                    if event.key == keymap["texture"]:
+                        texture = not texture
 
             keys = pygame.key.get_pressed()
             camera.update_position(keys, dt)
@@ -132,7 +135,7 @@ class Engine():
                 0.0,       0.0,       0.0,       1.0
             ])
             glTranslatef(*(-np.array(pivot)))
-            self.draw_obj(*cube_obj, wireframe=wireframe)  
+            self.draw_obj(*cube_obj, texture_id=cube_tex, wireframe=wireframe, texture=texture)  
             glPopMatrix()
 
             m = glGetFloatv(GL_MODELVIEW_MATRIX).copy()
@@ -222,41 +225,80 @@ class Engine():
 
         glViewport(*viewport)
 
+    def load_texture(self, path):
+        from PIL import Image
+        img = Image.open(path).convert("RGB")
+        img_data = img.tobytes("raw", "RGB", 0, -1)
+        width, height = img.size
+
+        tex_id = glGenTextures(1)
+        glBindTexture(GL_TEXTURE_2D, tex_id)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, img_data)
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        glBindTexture(GL_TEXTURE_2D, 0)
+        return tex_id
+
     def load_obj(self, filename):
         vertices = []
+        texcoords = []
         faces = []
 
         with open(filename, 'r') as file:
             for line in file:
-                if line.startswith('v '):  # vertex
+                if line.startswith('v '):
                     parts = line.strip().split()
                     vertex = list(map(float, parts[1:4]))
                     vertices.append(vertex)
-                elif line.startswith('f '):  # face
+                elif line.startswith('vt '):
+                    parts = line.strip().split()
+                    uv = list(map(float, parts[1:3]))
+                    texcoords.append(uv)
+                elif line.startswith('f '):
                     parts = line.strip().split()[1:]
-                    face = [int(p.split('/')[0]) - 1 for p in parts]  # index starts at 1 in .obj
+                    face = []
+                    for p in parts:
+                        v_indices = p.split('/')
+                        v_idx = int(v_indices[0]) - 1
+                        vt_idx = int(v_indices[1]) - 1 if len(v_indices) > 1 and v_indices[1] != '' else None
+                        face.append((v_idx, vt_idx))
                     if len(face) == 3:
                         faces.append(face)
-                    elif len(face) == 4:  # convert quad to two triangles
+                    elif len(face) == 4:
                         faces.append([face[0], face[1], face[2]])
                         faces.append([face[0], face[2], face[3]])
+        print(vertices)
+        print(faces)
+        return vertices, faces, texcoords
+ 
+    def draw_obj(self, vertices, faces, texcoords, texture_id=None, wireframe=False, texture=False):
+        if texture and texture_id:
+            glEnable(GL_TEXTURE_2D)
+            glBindTexture(GL_TEXTURE_2D, texture_id)
+        else:
+            glDisable(GL_TEXTURE_2D)
 
-        return np.array(vertices, dtype=np.float32), np.array(faces, dtype=np.uint32)
-    
-    def draw_obj(self, vertices, faces, wireframe=False):
         glColor3f(1, 1, 1)
         if wireframe == True:
             for face in faces:
                 glBegin(GL_LINE_LOOP)
-                for i in face:
-                    glVertex3fv(vertices[i])
+                for vertex in face:
+                    v_idx = vertex[0]
+                    glVertex3fv(vertices[v_idx])
                 glEnd()
         else:
             glBegin(GL_TRIANGLES)  
             for face in faces:
-                for i in face:
-                    glVertex3fv(vertices[i])
+                for v_idx, vt_idx in face:
+                    if texture == True and vt_idx is not None and texcoords:
+                        glTexCoord2f(*texcoords[vt_idx])
+                    glVertex3fv(vertices[v_idx])
             glEnd()
+
+        if texture_id:
+            glBindTexture(GL_TEXTURE_2D, 0)
+            glDisable(GL_TEXTURE_2D)
 
     def load_skybox(self, folder_path):
         from PIL import Image

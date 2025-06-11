@@ -52,22 +52,24 @@ class Quaternion:
         return (rotated_vec.x, rotated_vec.y, rotated_vec.z)
     
     def to_matrix(self):
-        """Retourne une matrice 4x4 représentant ce quaternion comme une rotation."""
-        w, x, y, z = self.w, self.x, self.y, self.z
+        """Retourne la matrice canonique M(q) du quaternion (4x4)."""
+        a, b, c, d = self.w, self.x, self.y, self.z
         return [
-            [1 - 2*y*y - 2*z*z, 2*x*y - 2*w*z,     2*x*z + 2*w*y,     0],
-            [2*x*y + 2*w*z,     1 - 2*x*x - 2*z*z, 2*y*z - 2*w*x,     0],
-            [2*x*z - 2*w*y,     2*y*z + 2*w*x,     1 - 2*x*x - 2*y*y, 0],
-            [0,                 0,                 0,                 1]
+            [ a, -b, -c, -d ],
+            [ b,  a, -d,  c ],
+            [ c,  d,  a, -b ],
+            [ d, -c,  b,  a ]
         ]
 
     @staticmethod
     def from_matrix(matrix):
-        """Extrait un quaternion depuis une matrice 4x4 (supposée purement rotationnelle)."""
-        # Extraire la sous-matrice 3x3 de rotation
-        rot = [row[:3] for row in matrix[:3]]
-        return Quaternion.from_rotation_matrix(rot)
-    
+        """Construit un quaternion depuis sa matrice canonique M(q)."""
+        a = matrix[0][0]
+        b = matrix[1][0]
+        c = matrix[2][0]
+        d = matrix[3][0]
+        return Quaternion(a, b, c, d)
+        
     def to_rotation_matrix(self):
         w, x, y, z = self.w, self.x, self.y, self.z
         return [

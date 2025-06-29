@@ -36,11 +36,40 @@ class Engine():
             "placeholder": self.load_texture('assets/textures/placeholder.png'),
         }
 
-        self.scene = [
+        self.scene = {}
 
-        ]
+    def init_scene(self):
+        cube1 = Object3D("assets/objs/cube.obj", self.textures['placeholder'])
+        # q1 = Quaternion(0.9999619, 0.0087265, 0.0, 0.0) # 1deg x
+        # angle = 45
+        # c = np.cos(angle)
+        # s = np.sin(angle)
+        # m = np.array([
+        #     [1,  0,  0],
+        #     [0,  c, -s],
+        #     [0,  s,  c]
+        # ])
+        # cube1.rotate_with_matrix(m)
+        self.scene["cube1"] = cube1
+
+    def update_scene(self):
+        q1 = Quaternion(0.9999619, 0.0087265, 0.0, 0.0) # 1deg x
+        angle = 0.1
+        c = np.cos(angle)
+        s = np.sin(angle)
+        m = np.array([
+            [1,  0,  0],
+            [0,  c, -s],
+            [0,  s,  c]
+        ])
+        self.scene["cube1"].rotateM(m)
+
+    def draw_scene(self, wireframe, textured):
+        for obj in self.scene.values():
+            obj.draw(wireframe=wireframe, textured=textured)
 
     def run(self):
+        # OpenGL default settings
         glEnable(GL_DEPTH_TEST)
         glClearColor(0.1, 0.1, 0.1, 1)
 
@@ -50,32 +79,28 @@ class Engine():
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
 
+        # Pygame default settings
         pygame.event.set_grab(False)
         pygame.mouse.set_visible(True)
 
-        # CUBE 1
-        cube = Object3D("assets/objs/cube.obj", self.textures['placeholder'])
-        # q1 = Quaternion(0.9999619, 0.0087265, 0.0, 0.0) # 1deg x
-        # c = np.cos(angle)
-        # s = np.sin(angle)
-        # m = np.array([
-        #     [1,  0,  0],
-        #     [0,  c, -s],
-        #     [0,  s,  c]
-        # ])
-        # cube.rotate_with_matrix(m)
-
+        # Custom default settings
         mouse_control = False
         wireframe = False
         texture = True
         running = True
 
+        # Init scene
+        self.init_scene()
+
         while running:
             dt = self.clock.tick(60) / 1000
-
+            keys = pygame.key.get_pressed()
+            
+            # Events
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
+
 
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     if event.button == 1:
@@ -105,23 +130,25 @@ class Engine():
                     if event.key == keymap["texture"]:
                         texture = not texture
 
-            keys = pygame.key.get_pressed()
+            # Camera
             self.camera.update_position(keys, dt)
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
             glLoadIdentity()
             self.camera.apply_view()
 
+            # Draw and update
             self.draw_skybox(self.skybox_texture)
-
             self.draw_axes(length=5.0, width=5.0)
+            self.draw_scene(wireframe=wireframe, textured=texture)
+            self.update_scene()
 
-            cube.draw(wireframe=wireframe, textured=texture) 
-
+            # Axis overlay
             m = glGetFloatv(GL_MODELVIEW_MATRIX).copy()
             # Supprimer la translation
             m[3][0] = m[3][1] = m[3][2] = 0.0
             self.draw_axes_overlay(m)
 
+            # Update
             pygame.display.flip()
             self.clock.tick(60)
 

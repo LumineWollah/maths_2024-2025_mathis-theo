@@ -74,11 +74,15 @@ class Object3D:
             glDisable(GL_TEXTURE_2D)
 
     def rotate(self, quaternion):
-        """Applique une rotation à tous les sommets de l'objet autour du pivot."""
+        q = quaternion.normalize()
+        composed_rotation = q * self._rotation
+        self.set_rotation(composed_rotation)
+
+    def set_rotation(self, quaternion):
         q = quaternion.normalize()
         rotated_vertices = []
 
-        for vertex in self._vertices:
+        for vertex in self._original_vertices:
             # Translation par rapport au pivot
             relative = np.array(vertex) - self._pivot
             rotated = q.rotate_vector(relative)
@@ -86,41 +90,32 @@ class Object3D:
             rotated_vertices.append(rotated_vertex.tolist())
 
         self._vertices = rotated_vertices
-        self.rotation = q if self.rotation is None else (q * self.rotation).normalize()
+        self._rotation = q
 
-    def rotate_with_matrix(self, matrix):
-        """
-        Applique une rotation par matrice 3x3 autour du pivot à tous les sommets de l'objet.
-        Met aussi à jour self.rotation en tant que matrice cumulée.
-        """
+    def rotateM(self, matrix):
+        if isinstance(self._rotation, np.ndarray):
+            composed_rotation = matrix @ self._rotation
+        else:
+            composed_rotation = matrix
+
+        self.set_rotationM(composed_rotation)
+
+    def set_rotationM(self, matrix):
         rotated_vertices = []
 
-        for vertex in self._vertices:
+        for vertex in self._original_vertices:
             relative = np.array(vertex) - self._pivot
             rotated = matrix @ relative
             rotated_vertex = rotated + self._pivot
             rotated_vertices.append(rotated_vertex.tolist())
 
         self._vertices = rotated_vertices
-
-        # Mise à jour de la rotation cumulée
-        if isinstance(self._rotation, np.ndarray):
-            self._rotation = matrix @ self._rotation
-        elif self._rotation is None or self._rotation == 0:  # cas initial si mal initialisé
-            self._rotation = matrix
-        else:
-            self._rotation = matrix @ np.identity(3)  # fallback
+        self._rotation = matrix 
 
     def translate(self, dx, dy, dz):
-        """
-        Applique une translation simple aux sommets.
-        """
         self.set_position(self._position[0] + dx, self._position[1] + dy, self._position[2] + dz)
 
     def set_position(self, x, y, z):
-        """
-        Applique une translation simple aux sommets.
-        """
         translation = np.array([x, y, z])
         self._position = translation
 
@@ -132,13 +127,9 @@ class Object3D:
         self._vertices = translated_vertices
 
     def scale(self, sx, sy, sz):
-        """
-        Applique un scaling autour du pivot.
-        """
         self.set_scale(self._scale[0] + sx, self._scale[1] + sy, self._scale[2] + sz)
 
     def set_scale(self, x, y, z):
-        """Applique une mise à l'échelle absolue à partir des sommets d'origine."""
         self._scale = np.array([x, y, z])
         scaled_vertices = []
 
@@ -151,10 +142,6 @@ class Object3D:
         self._vertices = scaled_vertices
 
     def shear(self, xy=0, xz=0, yx=0, yz=0, zx=0, zy=0):
-        """
-        Applique un cisaillement RELATIF en composant avec le cisaillement existant (_sheer).
-        Utilise la fonction shear() pour mettre à jour les sommets de manière absolue.
-        """
         new_shear = np.array([
             [1,  xy, xz],
             [yx, 1,  yz],
@@ -173,10 +160,6 @@ class Object3D:
         self.set_shear(xy=xy_new, xz=xz_new, yx=yx_new, yz=yz_new, zx=zx_new, zy=zy_new)
 
     def set_shear(self, xy=0, xz=0, yx=0, yz=0, zx=0, zy=0):
-        """
-        Applique un cisaillement absolu à l'objet autour du pivot.
-        Met à jour self.vertices et self._sheer.
-        """
         shear_matrix = np.array([
             [1,  xy, xz],
             [yx, 1,  yz],

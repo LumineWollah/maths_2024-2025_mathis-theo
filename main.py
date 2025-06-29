@@ -1,6 +1,4 @@
 # TODO
-# - Rotation matrices ET quaternion
-# - Composé de rotations avec quaternons, cisaillement, scalling, translation avec quaternon
 # - Scènes
 
 # Remarques
@@ -55,15 +53,23 @@ class Engine():
         pygame.event.set_grab(False)
         pygame.mouse.set_visible(True)
 
+        # CUBE 1
         cube = Object3D("assets/objs/cube.obj", self.textures['placeholder'])
-        w, x, y, z = 0, 0, 0, 0
-        angle = math.pi / 4  # 45°
-        # cube.rotation = Quaternion(math.cos(angle / 2), math.sin(angle / 2), 0, 0)
+        # q1 = Quaternion(0.9999619, 0.0087265, 0.0, 0.0) # 1deg x
+        # c = np.cos(angle)
+        # s = np.sin(angle)
+        # m = np.array([
+        #     [1,  0,  0],
+        #     [0,  c, -s],
+        #     [0,  s,  c]
+        # ])
+        # cube.rotate_with_matrix(m)
 
         mouse_control = False
         wireframe = False
-        texture = False
+        texture = True
         running = True
+
         while running:
             dt = self.clock.tick(60) / 1000
 
@@ -109,16 +115,6 @@ class Engine():
 
             self.draw_axes(length=5.0, width=5.0)
 
-            # angle = 0.1
-            # cube.rotate(Quaternion(math.cos(angle), math.sin(angle), 0, 0))
-            # c = np.cos(angle)
-            # s = np.sin(angle)
-            # m = np.array([
-            #     [1,  0,  0],
-            #     [0,  c, -s],
-            #     [0,  s,  c]
-            # ])
-            # cube.rotate_with_matrix(m)
             cube.draw(wireframe=wireframe, textured=texture) 
 
             m = glGetFloatv(GL_MODELVIEW_MATRIX).copy()

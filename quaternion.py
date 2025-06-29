@@ -46,6 +46,10 @@ class Quaternion:
             return Quaternion(1, 0, 0, 0)
         return Quaternion(self.w / n, self.x / n, self.y / n, self.z / n)
     
+    def inverse(self):
+        w, x, y, z = self.w, self.x, self.y, self.z
+        return Quaternion(w, -x, -y, -z)
+    
     def rotate_vector(self, vector):
         q_vec = Quaternion(0, *vector)
         rotated_vec = self * q_vec * self.conjugate()

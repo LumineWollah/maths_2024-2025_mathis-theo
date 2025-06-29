@@ -150,6 +150,9 @@ class Object3D:
     def set_pivot(self, x, y, z):
         self._pivot = np.array([x, y, z])
 
-    def calculate_pivot(self):
-        verts = np.array(self._original_vertices)
-        self._pivot = verts.mean(axis=0)
+    def set_pivot_world(self, x, y, z):
+        pivot_world = np.array([x, y, z])
+        relative = pivot_world - self._position
+        inv_rot = self._rotation.inverse()
+        pivot_local = inv_rot.rotate_vector(relative)
+        self._pivot = pivot_local

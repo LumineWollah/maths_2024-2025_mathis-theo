@@ -44,8 +44,8 @@ class Engine():
         self.scene["cube1"] = cube1
 
         cylinder1 = Object3D("assets/objs/cylinder.obj", self.textures['placeholder'])
-        cylinder1.set_position(3, 0, 0)
-        cylinder1.set_pivot(0, 2, 0)
+        cylinder1.set_position(3, 2, 0)
+        cylinder1.set_pivot_world(0, 0, 0)
         self.scene["cylinder1"] = cylinder1
 
         pyramid1 = Object3D("assets/objs/pyramid.obj", self.textures['placeholder'])

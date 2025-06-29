@@ -40,21 +40,33 @@ class Engine():
 
     def init_scene(self):
         cube1 = Object3D("assets/objs/cube.obj", self.textures['placeholder'])
-        # q1 = Quaternion(0.9999619, 0.0087265, 0.0, 0.0) # 1deg x
-        # angle = 45
-        # c = np.cos(angle)
-        # s = np.sin(angle)
-        # m = np.array([
-        #     [1,  0,  0],
-        #     [0,  c, -s],
-        #     [0,  s,  c]
-        # ])
-        # cube1.rotate_with_matrix(m)
+        cube1.set_position(0, 0, 0)
         self.scene["cube1"] = cube1
+
+        cylinder1 = Object3D("assets/objs/cylinder.obj", self.textures['placeholder'])
+        cylinder1.set_position(3, 0, 0)
+        cylinder1.set_pivot(0, 2, 0)
+        self.scene["cylinder1"] = cylinder1
+
+        pyramid1 = Object3D("assets/objs/pyramid.obj", self.textures['placeholder'])
+        pyramid1.set_position(6, 0, 0)
+        pyramid1.set_scale(2, 5, 1)
+        self.scene["pyramid1"] = pyramid1
+
+        tetrahedron1 = Object3D("assets/objs/tetrahedron.obj", self.textures['placeholder'])
+        tetrahedron1.set_position(9, 0, 0)
+        self.scene["tetrahedron1"] = tetrahedron1
+
+        sphere1 = Object3D("assets/objs/sphere.obj", self.textures['placeholder'])
+        sphere1.set_position(12, 0, 0)
+        sphere1.shear(xy=1)
+        self.scene["sphere1"] = sphere1
 
     def update_scene(self):
         q1 = Quaternion(0.9999619, 0.0087265, 0.0, 0.0) # 1deg x
-        angle = 0.1
+        self.scene["cube1"].rotate(q1)
+
+        angle = 0.1 # rad
         c = np.cos(angle)
         s = np.sin(angle)
         m = np.array([
@@ -62,7 +74,8 @@ class Engine():
             [0,  c, -s],
             [0,  s,  c]
         ])
-        self.scene["cube1"].rotateM(m)
+        self.scene["cylinder1"].rotateM(m)
+        
 
     def draw_scene(self, wireframe, textured):
         for obj in self.scene.values():

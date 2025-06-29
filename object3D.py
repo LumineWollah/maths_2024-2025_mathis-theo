@@ -1,5 +1,4 @@
 import numpy as np
-
 from quaternion import Quaternion
 
 class Object3D:
@@ -10,13 +9,16 @@ class Object3D:
 
         self._position = np.array([0.0, 0.0, 0.0])
         self._scale = np.array([1.0, 1.0, 1.0])
-        self._rotation = Quaternion(0, 0, 0, 0) # Quaternion or rotation matrix
-        self._sheer = np.array([[1, 0, 0], [0, 1, 0] ,[0, 0, 1]])
+        self._rotation = Quaternion(1, 0, 0, 0)
+        self._sheer = np.identity(3)
         self._pivot = np.array([0.0, 0.0, 0.0])
+        self._rotation_matrix = np.identity(3) 
+        self._use_rotation_matrix = False # Flag pour savoir quelle rotation utiliser
 
         self.load(path)
         self._texture_id = texture_id
         self._original_vertices = list(self._vertices)
+        self.apply_transformations()
 
     def load(self, filename):
         with open(filename, 'r') as file:
@@ -45,7 +47,7 @@ class Object3D:
 
     def draw(self, wireframe=False, textured=False):
         from OpenGL.GL import glEnable, glDisable, glBindTexture, glColor3f, glBegin, glEnd, glTexCoord2f, glVertex3fv, GL_TEXTURE_2D, GL_TRIANGLES, GL_LINE_LOOP
-
+        
         if textured and self._texture_id:
             glEnable(GL_TEXTURE_2D)
             glBindTexture(GL_TEXTURE_2D, self._texture_id)
@@ -73,73 +75,50 @@ class Object3D:
             glBindTexture(GL_TEXTURE_2D, 0)
             glDisable(GL_TEXTURE_2D)
 
+    def apply_transformations(self):
+        transformed_vertices = []
+        for vertex in self._original_vertices:
+            relative = np.array(vertex) - self._pivot
+            # Échelle
+            scaled = relative * self._scale
+            # Cisaillement
+            sheared = self._sheer @ scaled
+            # Rotation (Quaternion ou Matrice)
+            if self._use_rotation_matrix:
+                rotated = self._rotation_matrix @ sheared
+            else:
+                rotated = self._rotation.rotate_vector(sheared)
+            # Translation
+            translated = rotated + self._pivot + self._position
+            transformed_vertices.append(translated.tolist())
+        self._vertices = transformed_vertices
+
     def rotate(self, quaternion):
         q = quaternion.normalize()
-        composed_rotation = q * self._rotation
-        self.set_rotation(composed_rotation)
+        self._rotation = q * self._rotation
+        self._use_rotation_matrix = False
+        self.apply_transformations()
 
     def set_rotation(self, quaternion):
-        q = quaternion.normalize()
-        rotated_vertices = []
-
-        for vertex in self._original_vertices:
-            # Translation par rapport au pivot
-            relative = np.array(vertex) - self._pivot
-            rotated = q.rotate_vector(relative)
-            rotated_vertex = np.array(rotated) + self._pivot
-            rotated_vertices.append(rotated_vertex.tolist())
-
-        self._vertices = rotated_vertices
-        self._rotation = q
-
-    def rotateM(self, matrix):
-        if isinstance(self._rotation, np.ndarray):
-            composed_rotation = matrix @ self._rotation
-        else:
-            composed_rotation = matrix
-
-        self.set_rotationM(composed_rotation)
-
-    def set_rotationM(self, matrix):
-        rotated_vertices = []
-
-        for vertex in self._original_vertices:
-            relative = np.array(vertex) - self._pivot
-            rotated = matrix @ relative
-            rotated_vertex = rotated + self._pivot
-            rotated_vertices.append(rotated_vertex.tolist())
-
-        self._vertices = rotated_vertices
-        self._rotation = matrix 
+        self._rotation = quaternion.normalize()
+        self._use_rotation_matrix = False
+        self.apply_transformations()
 
     def translate(self, dx, dy, dz):
-        self.set_position(self._position[0] + dx, self._position[1] + dy, self._position[2] + dz)
+        self._position += np.array([dx, dy, dz])
+        self.apply_transformations()
 
     def set_position(self, x, y, z):
-        translation = np.array([x, y, z])
-        self._position = translation
-
-        translated_vertices = []
-        for vertex in self._vertices:
-            translated_vertex = np.array(vertex) + translation
-            translated_vertices.append(translated_vertex.tolist())
-
-        self._vertices = translated_vertices
+        self._position = np.array([x, y, z])
+        self.apply_transformations()
 
     def scale(self, sx, sy, sz):
-        self.set_scale(self._scale[0] + sx, self._scale[1] + sy, self._scale[2] + sz)
+        self._scale += np.array([sx, sy, sz])
+        self.apply_transformations()
 
     def set_scale(self, x, y, z):
         self._scale = np.array([x, y, z])
-        scaled_vertices = []
-
-        for vertex in self._original_vertices:
-            relative = np.array(vertex) - self._pivot
-            scaled = relative * self._scale
-            scaled_vertex = scaled + self._pivot
-            scaled_vertices.append(scaled_vertex.tolist())
-
-        self._vertices = scaled_vertices
+        self.apply_transformations()
 
     def shear(self, xy=0, xz=0, yx=0, yz=0, zx=0, zy=0):
         new_shear = np.array([
@@ -147,33 +126,30 @@ class Object3D:
             [yx, 1,  yz],
             [zx, zy, 1 ]
         ])
-
-        composed_shear = np.dot(new_shear, self._sheer)
-
-        xy_new = composed_shear[0,1]
-        xz_new = composed_shear[0,2]
-        yx_new = composed_shear[1,0]
-        yz_new = composed_shear[1,2]
-        zx_new = composed_shear[2,0]
-        zy_new = composed_shear[2,1]
-
-        self.set_shear(xy=xy_new, xz=xz_new, yx=yx_new, yz=yz_new, zx=zx_new, zy=zy_new)
+        self._sheer = new_shear @ self._sheer
+        self.apply_transformations()
 
     def set_shear(self, xy=0, xz=0, yx=0, yz=0, zx=0, zy=0):
-        shear_matrix = np.array([
+        self._sheer = np.array([
             [1,  xy, xz],
             [yx, 1,  yz],
             [zx, zy, 1 ]
         ])
+        self.apply_transformations()
 
-        # Appliquer le cisaillement aux sommets originaux
-        sheared_vertices = []
-        for vertex in self._original_vertices:
-            relative = np.array(vertex) - self._pivot
-            sheared = np.dot(shear_matrix, relative)
-            sheared_vertex = sheared + self._pivot
-            sheared_vertices.append(sheared_vertex.tolist())
+    def rotateM(self, matrix):
+        self._rotation_matrix = matrix @ self._rotation_matrix
+        self._use_rotation_matrix = True
+        self.apply_transformations()
 
-        self._vertices = sheared_vertices
-        self._sheer = shear_matrix
+    def set_rotationM(self, matrix):
+        self._rotation_matrix = matrix
+        self._use_rotation_matrix = True
+        self.apply_transformations()
 
+    def set_pivot(self, x, y, z):
+        self._pivot = np.array([x, y, z])
+
+    def calculate_pivot(self):
+        verts = np.array(self._original_vertices)
+        self._pivot = verts.mean(axis=0)

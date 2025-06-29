@@ -57,7 +57,8 @@ class Engine():
 
         cube = Object3D("assets/objs/cube.obj", self.textures['placeholder'])
         w, x, y, z = 0, 0, 0, 0
-        cube.rotation = Quaternion(0.92388, 0.0, 0.0, 0.0)
+        angle = math.pi / 4  # 45°
+        # cube.rotation = Quaternion(math.cos(angle / 2), math.sin(angle / 2), 0, 0)
 
         mouse_control = False
         wireframe = False
@@ -108,10 +109,16 @@ class Engine():
 
             self.draw_axes(length=5.0, width=5.0)
 
-            # cube.rotation.x += 0.01
-            # cube.rotation.y += 0.01
-            # cube.rotation.z += 0.01
-            cube.transform()
+            # angle = 0.1
+            # cube.rotate(Quaternion(math.cos(angle), math.sin(angle), 0, 0))
+            # c = np.cos(angle)
+            # s = np.sin(angle)
+            # m = np.array([
+            #     [1,  0,  0],
+            #     [0,  c, -s],
+            #     [0,  s,  c]
+            # ])
+            # cube.rotate_with_matrix(m)
             cube.draw(wireframe=wireframe, textured=texture) 
 
             m = glGetFloatv(GL_MODELVIEW_MATRIX).copy()

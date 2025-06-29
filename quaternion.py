@@ -108,7 +108,7 @@ class Quaternion:
             y = (m[1][2] + m[2][1]) / s
             z = 0.25 * s
 
-        return Quaternion(w, x, y, z).normalize()
+        return Quaternion(w, x, y, z)
 
     @staticmethod
     def random():

@@ -50,4 +50,10 @@ def main():
     print(Quaternion.random())
     
 if __name__ == "__main__":
-    main()
+    # main()
+
+    q1 = Quaternion(1, 2, 3, 4)
+    m1 = q1.to_rotation_matrix()
+    print(m1)
+    print(Quaternion.from_rotation_matrix(m1))
+

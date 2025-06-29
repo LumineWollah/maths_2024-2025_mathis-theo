@@ -1,4 +1,5 @@
 # TODO
+# - Rotation matrices ET quaternion
 # - Composé de rotations avec quaternons, cisaillement, scalling, translation avec quaternon
 # - Scènes
 
@@ -18,6 +19,7 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 
 from constants import *
+from object3D import Object3D
 from object import *
 from camera import Camera
 from keymap import keymap
@@ -28,13 +30,16 @@ class Engine():
         self.running = True
         self.screen_size = SCREEN_SIZE
         self.screen = pygame.display.set_mode((800,600), DOUBLEBUF | OPENGL)
-        self.clock = pg.time.Clock()
-        self.surf = pg.surface.Surface(SCREEN_SIZE)
         self.skybox_texture = self.load_skybox("assets/skybox/")
         self.camera = Camera()
+        self.clock = pg.time.Clock()
+
+        self.textures = {
+            "placeholder": self.load_texture('assets/textures/placeholder.png'),
+        }
 
         self.scene = [
-            Sphere(),
+
         ]
 
     def run(self):
@@ -47,38 +52,19 @@ class Engine():
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
 
-        camera = Camera()
-        clock = pygame.time.Clock()
-
         pygame.event.set_grab(False)
         pygame.mouse.set_visible(True)
 
-        cube_obj = self.load_obj('assets/objs/cube.obj')
-        cube_tex = self.load_texture('assets/textures/placeholder.png')
-
-        # angle = 0.0
-        rotation_q = Quaternion(1, 0, 0, 0)
+        cube = Object3D("assets/objs/cube.obj", self.textures['placeholder'])
+        w, x, y, z = 0, 0, 0, 0
+        cube.rotation = Quaternion(0.92388, 0.0, 0.0, 0.0)
 
         mouse_control = False
         wireframe = False
         texture = False
         running = True
         while running:
-            dt = clock.tick(60) / 1000
-            # angle += 90 * dt # Rotation matrice
-
-            angle_speed = 90  # deg/s
-            angle_rad = radians(angle_speed * dt)
-            half = angle_rad / 2
-            sin_half = math.sin(half)
-            axis = (1, 0.75, 0.5)
-            delta_q = Quaternion(
-                math.cos(half),
-                axis[0] * sin_half,
-                axis[1] * sin_half,
-                axis[2] * sin_half
-            )
-            rotation_q = (delta_q * rotation_q).normalize()
+            dt = self.clock.tick(60) / 1000
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -100,7 +86,7 @@ class Engine():
                 elif event.type == pygame.MOUSEMOTION:
                     if mouse_control:
                         dx, dy = event.rel
-                        camera.process_mouse_motion(dx, dy)
+                        self.camera.process_mouse_motion(dx, dy)
 
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE and mouse_control:
@@ -113,30 +99,20 @@ class Engine():
                         texture = not texture
 
             keys = pygame.key.get_pressed()
-            camera.update_position(keys, dt)
+            self.camera.update_position(keys, dt)
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
             glLoadIdentity()
-            camera.apply_view()
+            self.camera.apply_view()
 
             self.draw_skybox(self.skybox_texture)
 
             self.draw_axes(length=5.0, width=5.0)
 
-            rot = rotation_q.to_rotation_matrix()
-            pivot = (1.0, 1.0, 1.0)
-            glPushMatrix()
-            # glTranslatef(0, 0, 0) # Rotation matrice
-            # glRotatef(angle, 0, 1, 0)  # Rotation matrice
-            glTranslatef(*pivot)
-            glMultMatrixf([
-                rot[0][0], rot[1][0], rot[2][0], 0.0,
-                rot[0][1], rot[1][1], rot[2][1], 0.0,
-                rot[0][2], rot[1][2], rot[2][2], 0.0,
-                0.0,       0.0,       0.0,       1.0
-            ])
-            glTranslatef(*(-np.array(pivot)))
-            self.draw_obj(*cube_obj, texture_id=cube_tex, wireframe=wireframe, texture=texture)  
-            glPopMatrix()
+            # cube.rotation.x += 0.01
+            # cube.rotation.y += 0.01
+            # cube.rotation.z += 0.01
+            cube.transform()
+            cube.draw(wireframe=wireframe, textured=texture) 
 
             m = glGetFloatv(GL_MODELVIEW_MATRIX).copy()
             # Supprimer la translation
@@ -268,8 +244,7 @@ class Engine():
                     elif len(face) == 4:
                         faces.append([face[0], face[1], face[2]])
                         faces.append([face[0], face[2], face[3]])
-        print(vertices)
-        print(faces)
+
         return vertices, faces, texcoords
  
     def draw_obj(self, vertices, faces, texcoords, texture_id=None, wireframe=False, texture=False):

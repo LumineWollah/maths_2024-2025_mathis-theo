@@ -1,9 +1,3 @@
-# TODO
-# - Scènes
-
-# Remarques
-# - Rotation faites avec openGL et pas une implementation maths pure, est-ce un problème ? (Sachant qu'on a toujours les fichiers avec l'implémentation maths)
-
 # Libs
 # - Pygane
 # - PyOpenGL
